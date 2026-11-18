@@ -1,0 +1,60 @@
+# Single-instance Nexus CE on KIND. PostgreSQL is a separate release.
+namespaces:
+  nexusNs:
+    enabled: false
+    name: nexus
+statefulset:
+  clustered: false
+  replicaCount: 1
+  container:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "3Gi"
+      limits:
+        cpu: "2"
+        memory: "5Gi"
+    env:
+      install4jAddVmParams: "-Xms1g -Xmx2g"
+    additionalEnv:
+      - name: DB_NAME
+        valueFrom:
+          secretKeyRef:
+            name: nexus-db
+            key: dbname
+      - name: DB_HOST
+        valueFrom:
+          secretKeyRef:
+            name: nexus-db
+            key: host
+      - name: DB_USER
+        valueFrom:
+          secretKeyRef:
+            name: nexus-db
+            key: user
+      - name: DB_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: nexus-db
+            key: password
+secret:
+  existingDbSecret:
+    enabled: true
+  nexusAdminSecret:
+    enabled: false
+  license:
+    licenseSecret:
+      enabled: false
+pvc:
+  storage: 10Gi
+  volumeClaimTemplate:
+    enabled: true
+storageClass:
+  enabled: false
+  name: standard
+service:
+  nexus:
+    enabled: true
+    type: ClusterIP
+    port: 8081
+    targetPort: 8081
