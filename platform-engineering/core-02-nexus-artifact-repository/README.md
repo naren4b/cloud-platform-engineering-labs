@@ -34,13 +34,22 @@ flowchart LR
 
 **Storage:** Local-path PVCs are appropriate for a single-node test environment. Cluster deletion may remove the data. S3 is not a prerequisite for this deployment.
 
-## Chart inspection
+## Platform validation and chart inspection
+
+From the repository root, check the existing KIND platform:
 
 ```bash
+./setup.sh
+```
+
+Then inspect the Nexus chart in this project directory:
+
+```bash
+cd platform-engineering/core-02-nexus-artifact-repository
 ./run.sh
 ```
 
-The script checks local tooling, KIND context, storage and Gateway resources. It downloads and inspects a pinned upstream `nxrm-ha` chart without installing anything.
+`setup.sh` performs shared Kubernetes checks. `run.sh` downloads and inspects the pinned Nexus chart without installing it.
 
 ## Architecture decisions
 
