@@ -34,6 +34,45 @@ flowchart LR
 
 **Storage:** Local-path PVCs are appropriate for a single-node test environment. Cluster deletion may remove the data. S3 is not a prerequisite for this deployment.
 
+## Cost and licensing
+
+| Item | Cost or constraint |
+|---|---|
+| Nexus Community Edition | No license fee; Sonatype Community Edition EULA applies |
+| Community Edition usage | Up to 40,000 components and 100,000 requests per day |
+| PostgreSQL, Helm and KIND | No software license fee for this configuration |
+| Existing self-hosted VM | No additional VM purchase assumed; CPU, memory, disk, power and maintenance still have a cost |
+| Local-path PVC and self-signed TLS | No third-party service charge; storage capacity and certificate trust must be managed |
+| Nexus Pro | Commercial subscription; pricing depends on edition and usage |
+
+Exceeding Community Edition limits blocks new component additions until usage returns within the limits or the deployment is upgraded. Monitor the Nexus Usage Center.
+
+## Solution fit
+
+| Scenario | Fit | Architecture consideration |
+|---|---|---|
+| Personal development and KIND evaluation | **Good** | Free CE edition, single replica and local persistent storage |
+| Small internal build team | **Conditional** | Suitable below CE limits; requires backup, access controls and capacity planning |
+| Business-critical artifact service | **Not recommended for this design** | Single VM, single Nexus instance and local PVCs are failure points |
+| High availability or multi-node deployment | **Pro required** | CE does not include HA or clustering |
+| Artifact storage on AWS S3 or other cloud object storage | **Pro required** | CE does not include cloud blob stores |
+| Enterprise SSO and disaster recovery replication | **Pro required** | Commercial edition features |
+
+## Key design trade-offs
+
+- The official `nxrm-ha` chart is primarily intended for licensed Pro deployments. CE compatibility must be verified against the pinned chart and any local patch.
+- PostgreSQL is deployed separately for independent lifecycle management; it does not make the deployment highly available.
+- Local-path storage keeps the lab self-contained but does not replace backup or disaster recovery.
+- S3 is not needed for this architecture. It is not available as a Nexus CE cloud blob store.
+
+## Product references
+
+- [Sonatype editions and feature availability](https://help.sonatype.com/en/nexus-repository-tiers-and-feature-availability.html)
+- [Community Edition usage limits](https://help.sonatype.com/en/usage-center.html)
+- [Community Edition download and EULA](https://www.sonatype.com/products/nexus-community-edition-download)
+- [Sonatype pricing](https://www.sonatype.com/products/pricing)
+- [Official Nexus HA chart](https://github.com/sonatype/nxrm3-ha-repository)
+
 ## Platform validation and chart inspection
 
 From the repository root, check the existing KIND platform:
