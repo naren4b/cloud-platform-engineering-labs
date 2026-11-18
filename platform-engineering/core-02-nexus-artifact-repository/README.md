@@ -4,51 +4,52 @@ Single-instance Nexus Community Edition architecture for internal Maven and Grad
 
 ## Architecture
 
-### Kubernetes deployment view
+### Deployment overview
 
 ```mermaid
-flowchart TB
-    subgraph Clients["Build and delivery clients"]
-      Dev["Developers<br/>Maven / Gradle"]
-      CI["CI pipeline<br/>Build and publish"]
+flowchart LR
+    subgraph Consumers["Consumers"]
+        Dev["Developers<br/>Maven / Gradle"]
+        CI["CI pipeline"]
     end
 
-    subgraph KIND["KIND cluster · self-hosted VM"]
-      subgraph Edge["Shared platform · N42 Gateway"]
-        TLS["HTTPS listener<br/>TLS termination"]
-      end
-
-      subgraph NexusNS["Namespace: nexus"]
-        Route["HTTPRoute<br/>nexus.lab.local"]
-        Svc["Nexus Service<br/>ClusterIP :8081"]
-        App["Nexus CE<br/>StatefulSet · 1 replica"]
-        Blob[("Artifact data<br/>local-path PVC")]
-      end
-
-      subgraph DatabaseNS["PostgreSQL · independent Helm release"]
-        DbSvc["PostgreSQL Service<br/>ClusterIP :5432"]
-        Pg["PostgreSQL<br/>StatefulSet · 1 replica"]
-        Data[("Database<br/>local-path PVC")]
-      end
+    subgraph VM["Self-hosted VM · KIND Kubernetes"]
+        direction LR
+        subgraph Edge["Shared ingress"]
+            GW["N42 Gateway<br/>HTTPS / TLS"]
+            Route["HTTPRoute"]
+        end
+        subgraph AppNS["nexus namespace"]
+            Svc["ClusterIP :8081"]
+            Nexus["Nexus CE<br/>1 StatefulSet Pod"]
+            Artifacts[("Artifact PVC<br/>local-path")]
+            Auth["Nexus RBAC"]
+        end
+        subgraph DataNS["PostgreSQL · separate Helm release"]
+            PgSvc["ClusterIP :5432"]
+            Pg["PostgreSQL Pod"]
+            Db[("Database PVC<br/>local-path")]
+        end
     end
 
-    Dev -->|"Resolve / publish artifacts"| TLS
-    CI -->|"Resolve / publish artifacts"| TLS
-    TLS --> Route
-    Route --> Svc
-    Svc --> App
-    App -->|"Binary artifacts"| Blob
-    App -->|"Metadata / JDBC"| DbSvc
-    DbSvc --> Pg
-    Pg --> Data
+    Dev -->|"Download / publish"| GW
+    CI -->|"Build / publish"| GW
+    GW --> Route --> Svc --> Nexus
+    Nexus --- Auth
+    Nexus -->|"Artifact binaries"| Artifacts
+    Nexus -->|"JDBC · metadata"| PgSvc --> Pg --> Db
+    Nexus -.->|"Dependency proxy (optional)"| Central["Maven Central"]
 ```
 
-**Key boundaries**
+| Boundary | Design decision |
+|---|---|
+| Access | TLS at N42 Gateway; user and pipeline permissions in Nexus |
+| Application | Single Nexus CE instance; official pinned Helm chart with CE adaptation |
+| Data | Separate PostgreSQL release and two independent PVCs |
+| Availability | Single VM, no HA; persistent storage is not a backup |
+| Deployment | `run.sh` handles Nexus only; shared KIND prerequisites stay in `setup.sh` |
 
-- HTTPS terminates at the existing N42 Gateway. Nexus authentication and RBAC apply at the application.
-- Nexus stores binary artifacts on its PVC; PostgreSQL holds repository metadata on a separate PVC.
-- Each application has an independent release and storage lifecycle. This is **single-instance**, not HA.
-- Gateway, HTTPRoute and certificate configuration are environment-specific; they are not installed by the Nexus chart workflow below.
+**Request path:** Maven / Gradle or CI → HTTPS Gateway → HTTPRoute → Nexus Service → Nexus. Nexus writes artifact content to its PVC and metadata to PostgreSQL.
 
 ## Platform prerequisites
 
