@@ -33,7 +33,7 @@ helm pull sonatype/nxrm-ha --version "$CHART_VERSION" --destination "$WORK_DIR"
 tar -xzf "$WORK_DIR/nxrm-ha-$CHART_VERSION.tgz" -C "$WORK_DIR"
 
 echo "Checking license and database settings..."
-grep -RniE 'nexus\\.licenseFile|licenseSecret|jdbc|postgres|clustered' \
+grep -RniE 'licenseFile|licenseSecret|jdbc|postgres|clustered' \
   "$WORK_DIR/nxrm-ha/templates" "$WORK_DIR/nxrm-ha/values.yaml" || true
 
 echo
