@@ -1,28 +1,26 @@
 # GitLab API Automation
 
-## Objective
+## Overview
 
 Query projects with the GitLab REST API using Python.
 
-## Learning goals
+## Technical Scope
 
-- Explain the architecture, when to use it, and trade-offs.
-- Show security, reliability and cost implications.
-- Demonstrate a reproducible result and clear rollback.
+- Architecture and component boundaries for gitlab api automation.
+- Configuration, access controls and operational requirements.
+- Failure handling, testing and deployment considerations.
 
-## Tasks
+## Design Considerations
 
-| Task | Status |
-|---|---|
-| Understand the problem, architecture and key design decisions | Not Started |
-| Build a repeatable local or cloud lab for gitlab api automation | Not Started |
-| Apply secure defaults, least privilege and configuration validation | Not Started |
-| Test expected behavior, failure conditions and recovery | Not Started |
-| Capture evidence, interview answers and a publishable learning summary | Not Started |
+- Security: Least privilege, safe configuration and secret handling.
+- Reliability: Observable failure modes and recoverable operations.
+- Maintainability: Repeatable, version-controlled implementation.
+- Cost: Infrastructure consumption and resource lifecycle, where applicable.
 
-## Interview questions
+## Acceptance Criteria
 
-- When would you choose this design rather than an alternative?
-- What are the likely failure modes and security risks?
-- How would you operate, troubleshoot and scale it in production?
+- [ ] Implement the documented technical scope.
+- [ ] Validate the expected behavior and representative failures.
+- [ ] Document architecture decisions, operational commands and verification evidence.
 
+**Implementation status:** Planned.
