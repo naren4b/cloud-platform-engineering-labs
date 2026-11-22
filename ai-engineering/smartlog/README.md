@@ -1,10 +1,13 @@
 # SmartLog: Log Quality Analyzer
 
-**Status:** v0.1.1, offline synthetic-data demo (pluggable parser and empty-state fix).
+**Status:** v0.2 preview, offline noise-review guidance with synthetic tests.
 
 SmartLog is a lightweight Python log-analysis lab. It helps developers find frequent log patterns, identify ERROR bursts, measure severity and approximate log bytes, and create review packs for source-code improvements. **It does not automatically decide which logs to delete.**
 
 ## Architecture
+
+See [the scalable architecture](docs/ARCHITECTURE.md) and [next-action prompts](docs/NEXT-ACTIONS.md). The current application is local, not an enterprise multi-tenant service.
+
 
 ~~~mermaid
 flowchart LR
@@ -74,7 +77,9 @@ No host Python setup is required for development, testing, or running SmartLog.
 - Handle zero parsed records and empty result sets without crashing the dashboard. Shows "No matching log format detected." and renders no charts. Use the parser selector or a rules file for unsupported formats.
 - Filter logs by UTC date; timestamps without a timezone are interpreted as UTC.
 - Show severity counts, top normalized message templates, approximate bytes, and fixed 30-second ERROR bursts.
-- Download aggregate-only Markdown, JSON and CSV reports suitable for developer review.
+- Rank explainable noise candidates and protect likely audit, security and critical events; never treat frequency as proof that logging is safe to suppress.
+- Produce a next-action developer prompt without log messages or source identifiers. Aggregate counts may still be confidential.
+- Download Markdown, JSON, CSV and next-action prompts for approved local review.
 - Cap input at 5 MiB and 50,000 lines to limit resource use.
 
 ## Quality and privacy boundaries
@@ -91,8 +96,9 @@ No host Python setup is required for development, testing, or running SmartLog.
 
 | Version | Scope |
 |---|---|
-| v0.2 | Read-only Loki adapter with bounded time windows, auth, validation and incomplete-export reporting |
-| v0.3 | Scheduled baselines and before/after comparisons; optional Kubernetes workload discovery |
-| v0.4 | Approved LLM review, developer Cursor pack, optional MCP integration, policy-based quality scoring |
+| v0.2 (preview) | Offline noise-review candidates and safe follow-up prompts |
+| v0.3 | Read-only Loki adapter with bounded time windows, auth and completeness reporting |
+| v0.4 | Scheduled baselines, before/after comparisons and optional Kubernetes discovery |
+| v0.5 | Optional approved LLM, Cursor/MCP integrations and detailed policy scoring |
 
 Reference learning sample: [CloudDevOpsHub/AIOPS](https://github.com/CloudDevOpsHub/AIOPS). The SmartLog implementation is independent and does not copy that repository's Python scripts.

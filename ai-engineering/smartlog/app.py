@@ -10,6 +10,7 @@ import streamlit as st
 
 from analyzer import MAX_BYTES, analyze, to_markdown
 from parsers import AUTO, BUILTIN_PARSER_NAMES
+from guidance import find_candidates, next_action_prompt
 
 st.set_page_config(page_title="SmartLog", page_icon="📋", layout="wide")
 st.title("SmartLog: Logging Quality Analyzer")
@@ -86,6 +87,11 @@ if log_text.strip():
             st.warning("No matching log format detected.")
         st.write("SmartLog accepts logfmt/logrus (time=… level=… msg=…), ISO timestamp-first text, "
                  "Kubernetes CRI, and JSON/JSONL records. Choose a format manually or add a rules file.")
+        st.subheader("Suggested next action")
+        empty_prompt = next_action_prompt(result, [])
+        st.text_area("Local developer guidance", empty_prompt, height=180)
+        st.download_button("Download next-action prompt", empty_prompt,
+                           "smartlog-next-action.md", "text/markdown")
         st.download_button(
             "Download safe parsing summary",
             json.dumps({
@@ -127,6 +133,21 @@ if log_text.strip():
         else:
             st.info("No error bursts above the configured threshold.")
         st.caption(result["note"])
+
+        st.subheader("Noise review candidates")
+        findings = find_candidates(result)
+        candidates = [item for item in findings if item["action"] != "KEEP"]
+        if candidates:
+            st.dataframe(candidates, use_container_width=True, hide_index=True)
+            st.caption("These are human-review candidates, not confirmed bogus logs.")
+        else:
+            st.info("No strong candidate found from the initial frequency rules.")
+
+        st.subheader("Suggested next action")
+        guidance = next_action_prompt(result, findings)
+        st.text_area("Local developer guidance", guidance, height=230)
+        st.download_button("Download next-action prompt", guidance,
+                           "smartlog-next-action.md", "text/markdown")
 
         output = StringIO()
         writer = csv.DictWriter(output, fieldnames=["level", "template", "count", "bytes", "percent"])
