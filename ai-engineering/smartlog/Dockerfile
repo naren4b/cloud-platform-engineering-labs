@@ -5,6 +5,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py analyzer.py ./
 COPY samples ./samples
+COPY tests ./tests
 COPY .streamlit ./.streamlit
 EXPOSE 8501
 USER 65532:65532

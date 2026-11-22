@@ -15,29 +15,47 @@ flowchart LR
     E --> F[Developer review in Cursor]
 ~~~
 
-## Run locally
+## Run locally with Docker (default)
+
+**Host prerequisite: Docker only.** Do not install Python, pip, venv, or Streamlit on the host.
+
+From the repository root, build once (and rebuild after pulling source updates):
 
 ~~~bash
-cd ai-engineering/smartlog
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-streamlit run app.py
+docker build -t smartlog:local ai-engineering/smartlog
 ~~~
 
-Open the local Streamlit URL shown in the terminal. Select **Synthetic demo** to explore without adding data.
+Run the complete application:
 
 ~~~bash
-python -m unittest discover -s tests -v
+docker run --rm --name smartlog -p 127.0.0.1:8501:8501 smartlog:local
 ~~~
 
-## Run with Docker
+Open http://localhost:8501 and select **Synthetic demo**. Stop the container with Ctrl+C. To run the same five tests, also inside Docker:
 
 ~~~bash
-cd ai-engineering/smartlog
-docker build -t smartlog:0.1 .
-docker run --rm -p 127.0.0.1:8501:8501 smartlog:0.1
+docker run --rm --entrypoint python smartlog:local -m unittest discover -s tests -v
 ~~~
+
+### Prebuilt image, no local build (after publication)
+
+The GitHub Actions workflow builds and publishes `ghcr.io/naren4b/smartlog:latest` to GitHub Container Registry when merged to `main`. Once the package is published and made accessible to your account (public visibility or an approved login), you can run it directly:
+
+~~~bash
+docker run --rm --name smartlog -p 127.0.0.1:8501:8501 ghcr.io/naren4b/smartlog:latest
+~~~
+
+This image is **not available until the workflow has completed successfully and package visibility is configured**. For repeatable work, prefer an immutable version or digest over `latest`.
+
+### Optional: inspect or test inside a container
+
+Python and dependencies are available inside the image:
+
+~~~bash
+docker run --rm -it --entrypoint sh smartlog:local
+~~~
+
+No host Python setup is required for development, testing, or running SmartLog.
 
 ## v0.1 features
 

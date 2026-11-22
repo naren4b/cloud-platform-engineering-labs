@@ -2,6 +2,8 @@
 
 Reference implementations and architecture patterns for cloud infrastructure, platform engineering, Kubernetes, DevSecOps and site reliability engineering.
 
+**Docker-first rule:** Every runnable lab must provide a Docker image with its runtime and dependencies installed, plus a copy-ready `docker run` command. The host should need Docker only, not Python, Node.js, Java, pip, or a virtual environment. See [Docker-first project rule](docs/docker-first.md).
+
 ## Project Catalog
 
 ### AI Engineering
