@@ -12,7 +12,7 @@ from analyzer import MAX_BYTES, analyze, to_markdown
 
 st.set_page_config(page_title="SmartLog", page_icon="📋", layout="wide")
 st.title("SmartLog: Logging Quality Analyzer")
-st.caption("Offline v0.1. Paste or upload logs. No LLM, Loki connection, or outbound API calls.")
+st.caption("Offline v0.1.1. Paste or upload logs. No LLM, Loki connection, or outbound API calls.")
 
 source = st.radio("Source", ["Paste logs", "Upload log file", "Synthetic demo"], horizontal=True)
 log_text = ""
