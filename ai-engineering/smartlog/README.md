@@ -1,6 +1,6 @@
 # SmartLog: Log Quality Analyzer
 
-**Status:** v0.1.1 MVP, offline synthetic-data demo (parser and empty-state fix).
+**Status:** v0.1.1, offline synthetic-data demo (pluggable parser and empty-state fix).
 
 SmartLog is a lightweight Python log-analysis lab. It helps developers find frequent log patterns, identify ERROR bursts, measure severity and approximate log bytes, and create review packs for source-code improvements. **It does not automatically decide which logs to delete.**
 
@@ -33,9 +33,13 @@ docker run --rm --name smartlog -p 127.0.0.1:8501:8501 smartlog:local
 
 Open http://localhost:8501 and select **Synthetic demo**. Stop the container with Ctrl+C. To run the unit tests inside Docker:
 
+Run this from the `ai-engineering/smartlog` directory:
+
 ~~~bash
-docker run --rm --entrypoint python smartlog:local -m unittest discover -s tests -v
+docker run --rm -v "$PWD:/app" -w /app -e PYTHONDONTWRITEBYTECODE=1 --entrypoint python smartlog:local -m unittest discover -s tests -v
 ~~~
+
+The tests cover parsers, diagnostics, synthetic fixtures under `tests/fixtures/`, and the Streamlit empty states (via `streamlit.testing`). All fixtures are synthetic. Do not add production logs to the repository.
 
 ### Prebuilt image, no local build (after publication)
 
@@ -57,13 +61,17 @@ docker run --rm -it --entrypoint sh smartlog:local
 
 No host Python setup is required for development, testing, or running SmartLog.
 
-## v0.1 features
+## Features
 
 - Paste or upload .txt, .log, or .jsonl, or use bundled synthetic logs.
-- Parse ISO timestamp-first logs with optional severity and brackets, common Kubernetes CRI log lines, and JSONL (including Docker log envelopes). Parse Unix epoch timestamps in structured logs.
+- Pluggable parsers in `parsers.py`. Each parser is a `LineParser` subclass, so new formats do not change the analysis engine.
+- Auto-detect or manually select a format in the **Log format** selector: `auto`, `jsonl`, `logfmt`, `kubernetes-cri`, or `text`.
+- Parse ISO timestamp-first logs with optional severity and brackets, common Kubernetes CRI log lines, JSONL (including Docker log envelopes), and logfmt/logrus records (`time=… level=… msg=…`). Parse Unix epoch timestamps in structured logs.
+- Attach multiline records: whitespace-led lines, `Caused by:`, `... N more`, and lines starting with `}`, `]` or `"` are counted as continuation lines and attached to the preceding line. They are never discarded.
+- Application-specific formats through an optional rules JSON (upload in the **Custom parser rules** expander). Rules are regex-based with a named timestamp, level, and message. Keep real rules files local and out of git. `tests/fixtures/app_rules.json` shows the format.
 - Mark records without an explicit severity as UNKNOWN, rather than guessing their severity.
-- Show safe parsing failure categories and success percentage without exposing unparsed raw lines.
-- Handle zero parsed records and empty result sets without crashing the dashboard. Unsupported formats still need a custom parser.
+- Show safe parsing diagnostics without exposing unparsed raw lines: total input, blank, parsed, skipped by time range, unsupported, malformed, continuation, detected format, and parse success %. Success % is `(parsed + skipped + continuation) / (non-blank lines)`.
+- Handle zero parsed records and empty result sets without crashing the dashboard. Shows "No matching log format detected." and renders no charts. Use the parser selector or a rules file for unsupported formats.
 - Filter logs by UTC date; timestamps without a timezone are interpreted as UTC.
 - Show severity counts, top normalized message templates, approximate bytes, and fixed 30-second ERROR bursts.
 - Download aggregate-only Markdown, JSON and CSV reports suitable for developer review.

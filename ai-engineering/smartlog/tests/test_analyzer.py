@@ -1,9 +1,14 @@
 """Unit tests that run without Streamlit or network access."""
 
+import os
 import unittest
 from datetime import datetime, timezone
 
+from streamlit.testing.v1 import AppTest
+
 from analyzer import MAX_BYTES, analyze, normalize_message, parse_line, to_markdown
+
+FIXTURES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
 
 
 class TestAnalyzer(unittest.TestCase):
@@ -98,6 +103,71 @@ class TestAnalyzer(unittest.TestCase):
         with self.assertRaises(ValueError):
             analyze("x" * (MAX_BYTES + 1))
         self.assertIsNone(parse_line("nonsense"))
+    def test_logfmt_multiline_fixture(self):
+        with open(os.path.join(FIXTURES, "logfmt_multiline.log"), encoding="utf-8") as handle:
+            result = analyze(handle.read())
+        self.assertEqual(result["detected_format"], "logfmt")
+        self.assertEqual(result["matched_lines"], 3)
+        self.assertEqual(result["continuation_lines"], 3)
+        self.assertEqual(result["invalid_lines"], 0)
+        self.assertEqual(result["levels"], {"ERROR": 1, "INFO": 1, "WARN": 1})
+        self.assertEqual(result["error_bursts"], [])
+        self.assertEqual(result["parse_success_percent"], 100)
+
+    def test_manual_parser_selection(self):
+        line = 'time="2026-06-27T10:00:00Z" level=info msg="started"\n'
+        self.assertEqual(analyze(line, parser="logfmt")["matched_lines"], 1)
+        self.assertEqual(analyze(line, parser="jsonl")["matched_lines"], 0)
+        with self.assertRaises(ValueError):
+            analyze(line, parser="no-such-parser")
+
+    def test_custom_rules_fixture(self):
+        with open(os.path.join(FIXTURES, "app_rules.json"), encoding="utf-8") as handle:
+            rules = handle.read()
+        text = "[2026-06-27 10:00:00] SEVERE queue stalled\n[2026-06-27 10:00:01] INFO recovered\n"
+        result = analyze(text, rules_text=rules)
+        self.assertEqual(result["detected_formats"], {"acme-app": 2})
+        self.assertEqual(result["levels"], {"ERROR": 1, "INFO": 1})
+        with self.assertRaises(ValueError):
+            analyze(text, rules_text='{"rules": [{"name": "bad", "pattern": "^(?P<level>x)$"}]}')
+
+    def test_partial_parse_reports_invalid_timestamp(self):
+        text = ("2026-06-27 10:00:00 INFO good line\n"
+                "2026-13-45 10:00:00 INFO impossible date\n")
+        result = analyze(text)
+        self.assertEqual(result["matched_lines"], 1)
+        self.assertEqual(result["parse_failures"], {"invalid_timestamp": 1})
+        self.assertEqual(result["malformed_lines"], 1)
+        self.assertEqual(result["unsupported_lines"], 0)
+        self.assertEqual(result["parse_success_percent"], 50.0)
+
+
+class TestAppEmptyStates(unittest.TestCase):
+    APP = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app.py")
+
+    def _run(self, text=None):
+        at = AppTest.from_file(self.APP, default_timeout=30).run()
+        if text is not None:
+            at.text_area[0].input(text).run()
+        return at
+
+    def test_empty_input_shows_prompt_without_exception(self):
+        at = self._run()
+        self.assertFalse(at.exception)
+        self.assertEqual(len(at.get("vega_lite_chart")), 0)
+
+    def test_unsupported_format_shows_message_and_no_charts(self):
+        at = self._run("this is not a log format\nneither is this\n")
+        self.assertFalse(at.exception)
+        self.assertIn("No matching log format detected.", [w.value for w in at.warning])
+        self.assertEqual(len(at.get("vega_lite_chart")), 0)
+        self.assertEqual(len(at.get("dataframe")), 0)
+
+    def test_valid_logfmt_renders_charts(self):
+        at = self._run('time="2026-06-27T10:00:00Z" level=info msg="started"\n'
+                       'time="2026-06-27T10:00:01Z" level=error msg="failed"\n')
+        self.assertFalse(at.exception)
+        self.assertGreaterEqual(len(at.get("vega_lite_chart")), 1)
 
 
 if __name__ == "__main__":

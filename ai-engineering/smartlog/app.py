@@ -9,12 +9,23 @@ from pathlib import Path
 import streamlit as st
 
 from analyzer import MAX_BYTES, analyze, to_markdown
+from parsers import AUTO, BUILTIN_PARSER_NAMES
 
 st.set_page_config(page_title="SmartLog", page_icon="📋", layout="wide")
 st.title("SmartLog: Logging Quality Analyzer")
 st.caption("Offline v0.1.1. Paste or upload logs. No LLM, Loki connection, or outbound API calls.")
 
 source = st.radio("Source", ["Paste logs", "Upload log file", "Synthetic demo"], horizontal=True)
+parser_name = st.selectbox(
+    "Log format",
+    [AUTO, *BUILTIN_PARSER_NAMES],
+    help="Auto tries every supported format. Pick one manually if detection fails.",
+)
+rules_text = None
+with st.expander("Custom parser rules (optional JSON, kept on this machine)"):
+    rules_upload = st.file_uploader("Parser rules file", type=["json"], key="rules")
+    if rules_upload is not None:
+        rules_text = rules_upload.getvalue().decode("utf-8", errors="replace")
 log_text = ""
 if source == "Paste logs":
     log_text = st.text_area("Log lines", height=220, placeholder="2026-06-27 10:00:00 INFO Service started")
@@ -32,7 +43,7 @@ else:
 
 if log_text.strip():
     try:
-        initial = analyze(log_text)
+        initial = analyze(log_text, parser=parser_name, rules_text=rules_text)
         start = end = None
         if initial["coverage_start_utc"]:
             lower = datetime.fromisoformat(initial["coverage_start_utc"]).date()
@@ -45,39 +56,56 @@ if log_text.strip():
                 else:
                     st.warning("Choose a start and end date")
                     st.stop()
-        result = analyze(log_text, start=start, end=end)
+        result = analyze(log_text, start=start, end=end, parser=parser_name, rules_text=rules_text)
     except ValueError as error:
         st.error(str(error))
         st.stop()
 
     a, b, c, d = st.columns(4)
-    a.metric("Parsed logs", f"{result['matched_lines']:,}")
-    b.metric("Approx. bytes", f"{result['approx_bytes']:,}")
-    c.metric("Unique templates", f"{result['unique_templates']:,}")
+    a.metric("Total input lines", f"{result['input_lines']:,}")
+    b.metric("Parsed logs", f"{result['matched_lines']:,}")
+    c.metric("Skipped (time range)", f"{result['outside_time_range']:,}")
     d.metric("Unparsed lines", f"{result['invalid_lines']:,}")
+    e, f, g = st.columns(3)
+    e.metric("Unsupported lines", f"{result['unsupported_lines']:,}")
+    f.metric("Malformed lines", f"{result['malformed_lines']:,}")
+    g.metric("Continuation lines", f"{result['continuation_lines']:,}")
     st.caption(f"Parsing success: {result['parse_success_percent']}% | "
-               f"Detected formats: {result['detected_formats'] or 'none'}")
+               f"Detected format: {result['detected_format'] or 'none'} | "
+               f"Parser: {result['parser']} | Blank lines: {result['blank_lines']:,}")
     if result["invalid_lines"]:
         with st.expander("Parsing diagnostics (counts only, no raw log samples)"):
             st.json(result["parse_failures"])
-            st.caption("Unsupported lines are not automatically discarded from the source file.")
+            st.caption("Unparsed lines are never discarded from the source file. "
+                       "Use the Log format selector or a rules file if detection fails.")
 
     if result["matched_lines"] == 0:
-        st.warning("No supported log records detected in this selection. "
-                   "SmartLog accepts ISO timestamp-first text, common Kubernetes CRI "
-                   "and JSONL records. Check the timestamp and message structure locally.")
+        if result["outside_time_range"]:
+            st.warning("No records fall inside the selected time range.")
+        else:
+            st.warning("No matching log format detected.")
+        st.write("SmartLog accepts logfmt/logrus (time=… level=… msg=…), ISO timestamp-first text, "
+                 "Kubernetes CRI, and JSON/JSONL records. Choose a format manually or add a rules file.")
         st.download_button(
             "Download safe parsing summary",
             json.dumps({
                 "input_lines": result["input_lines"],
+                "blank_lines": result["blank_lines"],
                 "parsed_lines": result["matched_lines"],
+                "skipped_lines": result["outside_time_range"],
                 "unparsed_lines": result["invalid_lines"],
+                "unsupported_lines": result["unsupported_lines"],
+                "malformed_lines": result["malformed_lines"],
+                "continuation_lines": result["continuation_lines"],
+                "parser": result["parser"],
                 "parse_failures": result["parse_failures"],
                 "detected_formats": result["detected_formats"],
             }, indent=2),
             "smartlog-parsing-diagnostics.json", "application/json",
         )
     else:
+        st.caption(f"Approx. bytes: {result['approx_bytes']:,} | "
+                   f"Unique templates: {result['unique_templates']:,}")
         st.subheader("Severity distribution")
         if result["levels"]:
             st.bar_chart(

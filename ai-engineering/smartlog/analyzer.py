@@ -2,18 +2,13 @@
 
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
-import json
 import re
+
+from parsers import is_continuation, load_rules, parse_timestamp, parse_with, select_parsers
 
 MAX_BYTES = 5 * 1024 * 1024
 MAX_LINES = 50_000
-LEVELS = {"TRACE", "DEBUG", "INFO", "WARN", "WARNING", "ERROR", "FATAL", "CRITICAL", "UNKNOWN"}
 ERROR_LEVELS = {"ERROR", "FATAL", "CRITICAL"}
-TEXT_LINE = re.compile(
-    r"^(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)\s+"
-    r"(?P<level>TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL)\s+(?P<message>.+)$",
-    re.IGNORECASE,
-)
 SENSITIVE = re.compile(
     r"(?i)\b(password|passwd|token|secret|api[_-]?key|authorization)\s*[:=]\s*(?:\"[^\"]*\"|'[^']*'|\S+)"
 )
@@ -36,118 +31,18 @@ def normalize_message(message: str) -> str:
     return " ".join(value.split())[:240]
 
 
-# Common timestamp-first logs, optional brackets and nanosecond fractions.
-ISO_TS = (r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}"
-          r"(?:[.,]\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})?")
-TS_FIRST = re.compile(rf"^\[?(?P<timestamp>{ISO_TS})\]?\s+(?P<body>.+)$")
-CRI_LINE = re.compile(
-    rf"^(?P<timestamp>{ISO_TS})\s+(?:stdout|stderr)\s+[FP]\s+(?P<body>.*)$",
-    re.IGNORECASE,
-)
-LEVEL_TOKEN = re.compile(r"\b(TRACE|DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL)\b", re.I)
 
 
-def parse_timestamp(value) -> datetime | None:
-    """Parse ISO 8601 or Unix epochs. Timestamps without a zone mean UTC."""
-    if value is None:
-        return None
-    try:
-        if isinstance(value, (int, float)) or (
-            isinstance(value, str) and re.fullmatch(r"\d{10,19}", value.strip())
-        ):
-            number = float(value)
-            while number > 4_102_444_800:
-                number /= 1000
-            if not 946_684_800 <= number <= 4_102_444_800:
-                return None
-            return datetime.fromtimestamp(number, tz=timezone.utc)
-        stamp = datetime.fromisoformat(
-            str(value).strip().replace("Z", "+00:00").replace(",", ".")
-        )
-    except (ValueError, TypeError, OverflowError, OSError):
-        return None
-    if stamp.tzinfo is None:
-        stamp = stamp.replace(tzinfo=timezone.utc)
-    return stamp.astimezone(timezone.utc)
-
-
-def _severity_and_message(body: str) -> tuple[str, str]:
-    """Find a severity token near the start, otherwise mark UNKNOWN."""
-    match = LEVEL_TOKEN.search(body[:120])
-    if match is None:
-        return "UNKNOWN", body.strip()
-    level = match.group(1).upper()
-    if level == "WARNING":
-        level = "WARN"
-    # Keep logger and thread metadata intact; discard only the severity token.
-    message = (body[:match.start()] + " " + body[match.end():]).strip(" \t-:|[]")
-    return level, (message or body.strip())
-
-
-def parse_line_detail(line: str) -> tuple[dict | None, str]:
+def parse_line_detail(line: str, parsers=None) -> tuple[dict | None, str]:
     """Parse a line and return a safe diagnostic category, never raw content."""
     raw = line.strip().lstrip("\ufeff")
     if not raw:
         return None, "blank"
-    if raw.startswith("{"):
-        try:
-            obj = json.loads(raw)
-        except json.JSONDecodeError:
-            return None, "invalid_json"
-        if not isinstance(obj, dict):
-            return None, "unsupported_json"
-        timestamp = next((obj[k] for k in ("timestamp", "time", "ts", "@timestamp")
-                          if obj.get(k) is not None), None)
-        message = next((obj[k] for k in ("message", "msg", "log")
-                        if obj.get(k) is not None), None)
-        level = next((obj[k] for k in ("level", "severity", "log_level")
-                      if obj.get(k) is not None), None)
-        if timestamp is None:
-            return None, "missing_timestamp"
-        if message is None:
-            return None, "missing_message"
-        stamp = parse_timestamp(timestamp)
-        if stamp is None:
-            return None, "invalid_timestamp"
-        if isinstance(message, (dict, list)):
-            message = json.dumps(message, ensure_ascii=False)
-        message = str(message).strip()
-        if not message:
-            return None, "missing_message"
-        if level is None:
-            inferred, message = _severity_and_message(message)
-            level = inferred
-        else:
-            level = str(level).upper()
-            level = "WARN" if level == "WARNING" else level
-            if level not in LEVELS:
-                level = "UNKNOWN"
-        return {"timestamp": stamp, "level": level, "message": message,
-                "format": "jsonl"}, "parsed"
-
-    format_name = "text"
-    match = CRI_LINE.match(raw)
-    if match:
-        format_name = "kubernetes-cri"
-        timestamp = match.group("timestamp")
-        body = match.group("body")
-        # Many CRI lines contain an application timestamp inside the payload.
-        inner = TS_FIRST.match(body.strip())
-        if inner:
-            timestamp, body = inner.group("timestamp", "body")
-    else:
-        match = TS_FIRST.match(raw)
-        if match is None:
-            return None, "unsupported_prefix"
-        timestamp, body = match.group("timestamp", "body")
-    stamp = parse_timestamp(timestamp)
-    if stamp is None:
-        return None, "invalid_timestamp"
-    if not body.strip():
-        return None, "missing_message"
-    level, message = _severity_and_message(body)
-    return {"timestamp": stamp, "level": level, "message": message,
-            "format": format_name}, "parsed"
+    record, reason = parse_with(parsers if parsers is not None else select_parsers(), raw)
+    if record is None:
+        return None, reason
+    return {"timestamp": record.timestamp, "level": record.level,
+            "message": record.message, "format": record.format}, "parsed"
 
 
 def parse_line(line: str) -> dict | None:
@@ -156,8 +51,13 @@ def parse_line(line: str) -> dict | None:
 
 
 def analyze(text: str, start: datetime | None = None, end: datetime | None = None,
-            burst_seconds: int = 30, burst_threshold: int = 3) -> dict:
-    """Return JSON-serializable statistics, never raw log messages."""
+            burst_seconds: int = 30, burst_threshold: int = 3,
+            parser: str = "auto", rules_text: str | None = None) -> dict:
+    """Return JSON-serializable statistics, never raw log messages.
+
+    ``parser`` selects "auto" or one named parser. ``rules_text`` holds optional
+    JSON regex rules for application-specific formats (see parsers.load_rules).
+    """
     if len(text.encode("utf-8")) > MAX_BYTES:
         raise ValueError("Input exceeds the 5 MiB safety limit")
     lines = text.splitlines()
@@ -171,16 +71,29 @@ def analyze(text: str, start: datetime | None = None, end: datetime | None = Non
         end = end.replace(tzinfo=timezone.utc)
     if start and end and start > end:
         raise ValueError("Start must not be after end")
+    rules = load_rules(rules_text) if rules_text and rules_text.strip() else ()
+    parsers = select_parsers(parser, rules=rules)
 
     levels = Counter()
     patterns = defaultdict(lambda: {"count": 0, "bytes": 0})
     bursts = Counter()
     invalid = matched = ignored = matched_bytes = 0
+    blank = continuation = 0
     parse_failures = Counter()
     formats = Counter()
     earliest = latest = None
+    attachable = False  # True once any non-blank line precedes the current one
     for line in lines:
-        record, reason = parse_line_detail(line)
+        if not line.strip():
+            blank += 1
+            continue
+        if attachable and is_continuation(line):
+            # Multiline payload belongs to the preceding line (parsed or not); it is
+            # counted separately rather than as a parse failure, and never discarded.
+            continuation += 1
+            continue
+        attachable = True
+        record, reason = parse_line_detail(line, parsers)
         if record is None:
             invalid += 1
             parse_failures[reason] += 1
@@ -215,11 +128,19 @@ def analyze(text: str, start: datetime | None = None, end: datetime | None = Non
         for window, count in bursts.items() if count > burst_threshold
     ]
     suspicious_windows.sort(key=lambda r: (-r["error_count"], r["window_utc"]))
+    considered = len(lines) - blank
+    handled = matched + ignored + continuation
+    unsupported = parse_failures.get("unsupported_prefix", 0)
     return {
-        "input_lines": len(lines), "matched_lines": matched, "invalid_lines": invalid,
+        "input_lines": len(lines), "blank_lines": blank,
+        "matched_lines": matched, "invalid_lines": invalid,
+        "unsupported_lines": unsupported, "malformed_lines": invalid - unsupported,
+        "continuation_lines": continuation,
         "parse_failures": dict(sorted(parse_failures.items())),
         "detected_formats": dict(sorted(formats.items())),
-        "parse_success_percent": round(100 * (matched + ignored) / len(lines), 2) if lines else 0,
+        "detected_format": formats.most_common(1)[0][0] if formats else None,
+        "parser": parser,
+        "parse_success_percent": round(100 * handled / considered, 2) if considered else 0,
         "outside_time_range": ignored, "approx_bytes": matched_bytes,
         "levels": dict(sorted(levels.items())), "unique_templates": len(grouped),
         "patterns": grouped, "error_bursts": suspicious_windows[:20],
@@ -233,12 +154,17 @@ def to_markdown(result: dict) -> str:
     """Create an aggregate-only report suitable for human review."""
     lines = [
         "# SmartLog Quality Report", "",
+        f"- Total input lines: {result['input_lines']:,}",
+        f"- Blank lines: {result['blank_lines']:,}",
         f"- Parsed logs: {result['matched_lines']:,}",
-        f"- Invalid/unparsed lines: {result['invalid_lines']:,}",
+        f"- Continuation lines (attached to parsed records): {result['continuation_lines']:,}",
+        f"- Unparsed lines: {result['invalid_lines']:,} (unsupported: {result['unsupported_lines']:,}, malformed: {result['malformed_lines']:,})",
+        f"- Skipped (outside selected time range): {result['outside_time_range']:,}",
         f"- Parsing success: {result['parse_success_percent']}%",
+        f"- Parser selection: {result['parser']}",
+        f"- Detected format: {result['detected_format']}",
         f"- Detected formats: {result['detected_formats']}",
         f"- Safe parsing failure counts: {result['parse_failures']}",
-        f"- Outside selected time range: {result['outside_time_range']:,}",
         f"- Approximate log bytes: {result['approx_bytes']:,}",
         f"- Unique level/template pairs: {result['unique_templates']:,}",
         f"- First timestamp (UTC): {result['coverage_start_utc']}",

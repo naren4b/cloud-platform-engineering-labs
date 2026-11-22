@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "name": "acme-app",
+      "pattern": "^\\[(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})\\] (?P<level>[A-Z]+) (?P<message>.+)$",
+      "timestamp_format": "%Y-%m-%d %H:%M:%S",
+      "level_aliases": {"SEVERE": "ERROR"}
+    }
+  ]
+}
