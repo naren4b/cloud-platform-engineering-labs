@@ -55,21 +55,58 @@ if log_text.strip():
     b.metric("Approx. bytes", f"{result['approx_bytes']:,}")
     c.metric("Unique templates", f"{result['unique_templates']:,}")
     d.metric("Unparsed lines", f"{result['invalid_lines']:,}")
-    st.subheader("Severity distribution")
-    st.bar_chart([{"level": level, "count": count} for level, count in result["levels"].items()], x="level", y="count")
-    st.subheader("Top log patterns by byte volume")
-    st.dataframe(result["patterns"][:10], use_container_width=True, hide_index=True)
-    st.subheader("Error bursts (more than 3 ERROR/FATAL/CRITICAL events per 30 seconds)")
-    st.dataframe(result["error_bursts"], use_container_width=True, hide_index=True)
-    st.caption(result["note"])
+    st.caption(f"Parsing success: {result['parse_success_percent']}% | "
+               f"Detected formats: {result['detected_formats'] or 'none'}")
+    if result["invalid_lines"]:
+        with st.expander("Parsing diagnostics (counts only, no raw log samples)"):
+            st.json(result["parse_failures"])
+            st.caption("Unsupported lines are not automatically discarded from the source file.")
 
-    output = StringIO()
-    writer = csv.DictWriter(output, fieldnames=["level", "template", "count", "bytes", "percent"])
-    writer.writeheader()
-    writer.writerows(result["patterns"])
-    col1, col2, col3 = st.columns(3)
-    col1.download_button("Download Markdown", to_markdown(result), "smartlog-report.md", "text/markdown")
-    col2.download_button("Download JSON", json.dumps(result, indent=2), "smartlog-report.json", "application/json")
-    col3.download_button("Download patterns CSV", output.getvalue(), "smartlog-patterns.csv", "text/csv")
+    if result["matched_lines"] == 0:
+        st.warning("No supported log records detected in this selection. "
+                   "SmartLog accepts ISO timestamp-first text, common Kubernetes CRI "
+                   "and JSONL records. Check the timestamp and message structure locally.")
+        st.download_button(
+            "Download safe parsing summary",
+            json.dumps({
+                "input_lines": result["input_lines"],
+                "parsed_lines": result["matched_lines"],
+                "unparsed_lines": result["invalid_lines"],
+                "parse_failures": result["parse_failures"],
+                "detected_formats": result["detected_formats"],
+            }, indent=2),
+            "smartlog-parsing-diagnostics.json", "application/json",
+        )
+    else:
+        st.subheader("Severity distribution")
+        if result["levels"]:
+            st.bar_chart(
+                [{"level": level, "count": count}
+                 for level, count in result["levels"].items()],
+                x="level", y="count",
+            )
+        else:
+            st.info("No severity data available for the selected time range.")
+
+        st.subheader("Top log patterns by byte volume")
+        if result["patterns"]:
+            st.dataframe(result["patterns"][:10], use_container_width=True, hide_index=True)
+        else:
+            st.info("No log patterns found.")
+        st.subheader("Error bursts (more than 3 ERROR/FATAL/CRITICAL events per 30 seconds)")
+        if result["error_bursts"]:
+            st.dataframe(result["error_bursts"], use_container_width=True, hide_index=True)
+        else:
+            st.info("No error bursts above the configured threshold.")
+        st.caption(result["note"])
+
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames=["level", "template", "count", "bytes", "percent"])
+        writer.writeheader()
+        writer.writerows(result["patterns"])
+        col1, col2, col3 = st.columns(3)
+        col1.download_button("Download Markdown", to_markdown(result), "smartlog-report.md", "text/markdown")
+        col2.download_button("Download JSON", json.dumps(result, indent=2), "smartlog-report.json", "application/json")
+        col3.download_button("Download patterns CSV", output.getvalue(), "smartlog-patterns.csv", "text/csv")
 else:
     st.info("Paste logs, upload a file, or select the synthetic demo to start.")

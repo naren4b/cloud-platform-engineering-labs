@@ -1,6 +1,6 @@
 # SmartLog: Log Quality Analyzer
 
-**Status:** v0.1 MVP, offline synthetic-data demo.
+**Status:** v0.1.1 MVP, offline synthetic-data demo (parser and empty-state fix).
 
 SmartLog is a lightweight Python log-analysis lab. It helps developers find frequent log patterns, identify ERROR bursts, measure severity and approximate log bytes, and create review packs for source-code improvements. **It does not automatically decide which logs to delete.**
 
@@ -31,7 +31,7 @@ Run the complete application:
 docker run --rm --name smartlog -p 127.0.0.1:8501:8501 smartlog:local
 ~~~
 
-Open http://localhost:8501 and select **Synthetic demo**. Stop the container with Ctrl+C. To run the same five tests, also inside Docker:
+Open http://localhost:8501 and select **Synthetic demo**. Stop the container with Ctrl+C. To run the unit tests inside Docker:
 
 ~~~bash
 docker run --rm --entrypoint python smartlog:local -m unittest discover -s tests -v
@@ -60,7 +60,10 @@ No host Python setup is required for development, testing, or running SmartLog.
 ## v0.1 features
 
 - Paste or upload .txt, .log, or .jsonl, or use bundled synthetic logs.
-- Parse timestamps, severity and message from YYYY-MM-DD HH:MM:SS LEVEL message or JSONL with timestamp/time/ts, level/severity, and message/msg.
+- Parse ISO timestamp-first logs with optional severity and brackets, common Kubernetes CRI log lines, and JSONL (including Docker log envelopes). Parse Unix epoch timestamps in structured logs.
+- Mark records without an explicit severity as UNKNOWN, rather than guessing their severity.
+- Show safe parsing failure categories and success percentage without exposing unparsed raw lines.
+- Handle zero parsed records and empty result sets without crashing the dashboard. Unsupported formats still need a custom parser.
 - Filter logs by UTC date; timestamps without a timezone are interpreted as UTC.
 - Show severity counts, top normalized message templates, approximate bytes, and fixed 30-second ERROR bursts.
 - Download aggregate-only Markdown, JSON and CSV reports suitable for developer review.

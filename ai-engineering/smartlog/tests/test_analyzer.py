@@ -38,6 +38,61 @@ class TestAnalyzer(unittest.TestCase):
         self.assertNotIn("john@example.com", report)
         self.assertIn("<redacted>", report)
 
+    def test_common_text_formats(self):
+        text = (
+            "2026-11-22T09:00:00.100Z [INFO] [main] Application started\n"
+            "2026-11-22 09:00:01,321 WARN com.example.App - slow response\n"
+            "2026-11-22 09:00:02 connection pool healthy\n"
+        )
+        result = analyze(text)
+        self.assertEqual(result["matched_lines"], 3)
+        self.assertEqual(result["levels"], {"INFO": 1, "UNKNOWN": 1, "WARN": 1})
+        self.assertEqual(result["detected_formats"], {"text": 3})
+        self.assertEqual(result["parse_success_percent"], 100)
+
+    def test_kubernetes_cri_wrapped_log(self):
+        text = (
+            "2026-11-22T09:00:00.123456789Z stdout F 2026-11-22T09:00:00.1Z ERROR timed out\n"
+            "2026-11-22T09:00:01.123456789Z stderr F startup without level\n"
+        )
+        result = analyze(text)
+        self.assertEqual(result["levels"], {"ERROR": 1, "UNKNOWN": 1})
+        self.assertEqual(result["detected_formats"], {"kubernetes-cri": 2})
+
+    def test_docker_json_envelope_and_epoch(self):
+        text = (
+            '{"time":"2026-11-22T09:00:00Z","stream":"stdout","log":"INFO Worker ready"}\n'
+            '{"ts":1795338000000,"severity":"ERROR","msg":"DB timeout"}\n'
+        )
+        result = analyze(text)
+        self.assertEqual(result["levels"], {"ERROR": 1, "INFO": 1})
+        self.assertEqual(result["matched_lines"], 2)
+
+    def test_safe_failure_diagnostics(self):
+        result = analyze('not a log\n{"timestamp":"bad","level":"INFO","message":"secret=abc"}\n'
+                         '{"timestamp":"2026-11-22T09:00:00Z","msg":"safe"}\n')
+        self.assertEqual(result["invalid_lines"], 2)
+        self.assertEqual(result["parse_failures"], {
+            "invalid_timestamp": 1, "unsupported_prefix": 1,
+        })
+        self.assertEqual(result["levels"], {"UNKNOWN": 1})
+        self.assertNotIn("secret=abc", str(result))
+
+    def test_zero_parsed_data_has_valid_empty_statistics(self):
+        result = analyze("unrecognized\nalso unrecognized\n")
+        self.assertEqual(result["matched_lines"], 0)
+        self.assertEqual(result["levels"], {})
+        self.assertEqual(result["patterns"], [])
+        self.assertEqual(result["detected_formats"], {})
+        self.assertEqual(result["parse_failures"], {"unsupported_prefix": 2})
+
+    def test_empty_time_selection_has_no_crash_data(self):
+        result = analyze("2026-11-22 09:00:00 INFO started",
+                         start=datetime(2026, 11, 23, tzinfo=timezone.utc))
+        self.assertEqual(result["matched_lines"], 0)
+        self.assertEqual(result["outside_time_range"], 1)
+        self.assertEqual(result["levels"], {})
+
     def test_limits_and_empty_input(self):
         self.assertEqual(analyze("")["matched_lines"], 0)
         with self.assertRaises(ValueError):
