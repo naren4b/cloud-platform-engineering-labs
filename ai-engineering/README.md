@@ -1,60 +1,40 @@
 # AI Engineering Labs
 
-These 12 ideas are captured for **December 2026** as a learning backlog.
-They are not 12 committed deployments. The first implementation is [SmartLog](smartlog/README.md), a local logging-quality analyzer. Other project ideas remain a December learning backlog.
+12 independent project briefs for Python and agentic AI engineering.
+The initial learning target is December 2026. Each project has its own
+short directory and `README.md`. The first implemented lab is
+[SmartLog](smartlog/README.md), an offline, Docker-first logging-quality analyzer.
 
-Source: [LinkedIn list of 12 advanced AI engineering project ideas](https://lnkd.in/p/gu4RWnmb).
+Source: [LinkedIn project list](https://lnkd.in/p/gu4RWnmb).
 
-## Project catalog
+## Project Index
 
-| ID | Project | Priority | Suggested implementation | Status |
-| --- | --- | --- | --- | --- |
-| AI-01 | Context Assembler | P1 | Select relevant logs and metadata for AI analysis | Planned |
-| AI-02 | Hybrid Retrieval | P1 | Combine exact log filters with semantic search | Planned |
-| AI-03 | GraphRAG | P2 | Explore service and incident relationships | Deferred |
-| AI-04 | Self-Correcting Agentic RAG | P0 | Validate log evidence and retry weak retrieval | Planned |
-| AI-05 | Durable Agent State Machine | P0 | Resume interrupted audits without losing checkpoints | Planned |
-| AI-06 | Custom MCP Tool Server | P0 | Expose approved, read-only Loki queries | Planned |
-| AI-07 | Agent Memory | P2 | Persist investigation context safely | Deferred |
-| AI-08 | Multi-Agent System | P2 | Compare separate roles against a simpler single agent | Deferred |
-| AI-09 | Agent Evaluation Pipeline | P0 | Measure accuracy, false positives and repeatability | Planned |
-| AI-10 | Agent Security Gateway | P0 | Enforce tool permissions and data boundaries | Planned |
-| AI-11 | Semantic Cache | P1 | Skip repeated analysis of unchanged log patterns | Planned |
-| AI-12 | AI Architecture Deep Dive | P0 | Record design, reliability, cost and security trade-offs | Planned |
+| Project | Priority | Status |
+| --- | --- | --- |
+| [SmartLog: Log Quality Auditor](smartlog/README.md) | P0 | v0.1.1 MVP, next: noise detection |
+| [AI-01 Context Assembler](01-context/README.md) | P1 | Planned |
+| [AI-02 Hybrid Retrieval](02-hybrid-search/README.md) | P1 | Planned |
+| [AI-03 GraphRAG](03-graphrag/README.md) | P2 | Deferred |
+| [AI-04 Self-Correcting Agentic RAG](04-self-correcting-rag/README.md) | P0 | Planned |
+| [AI-05 Durable Agent State Machine](05-durable-agent/README.md) | P0 | Planned |
+| [AI-06 Custom MCP Tool Server](06-mcp-server/README.md) | P0 | Planned |
+| [AI-07 Agent Memory](07-agent-memory/README.md) | P2 | Deferred |
+| [AI-08 Multi-Agent System](08-multi-agent/README.md) | P2 | Deferred |
+| [AI-09 Agent Evaluation Pipeline](09-agent-eval/README.md) | P0 | Planned |
+| [AI-10 Agent Security Gateway](10-agent-security/README.md) | P0 | Planned |
+| [AI-11 Semantic Cache](11-semantic-cache/README.md) | P1 | Planned |
+| [AI-12 AI Architecture Deep Dive](12-ai-architecture/README.md) | P0 | Planned |
 
-P0 = December core; P1 = stretch; P2 = later.
+P0 = December core; P1 = stretch; P2 = later backlog.
 
-## December plan
+## Learning and Project Ownership
 
-- **Week 1, Dec 1-6:** Extend SmartLog log parsing and baseline quality checks; explore read-only MCP (#6)
-- **Week 2, Dec 7-13:** Evidence retrieval and self-correction (#4), context assembly (#1)
-- **Week 3, Dec 14-20:** Durable state (#5), evaluation (#9), security gateway (#10)
-- **Week 4, Dec 21-27:** Architecture review (#12), optional hybrid retrieval (#2) and caching (#11)
-- **Dec 28-31:** Review results and reprioritize incomplete work
+- Continue **SmartLog** with rule-based noise detection and safe before/after analysis using only local synthetic log fixtures.
+- Explore **AI-06 Custom MCP Tool Server** as a later optional integration.
+- Build the Logging Quality Auditor by integrating useful modules from these project briefs.
+- Keep this repository for code, tests and individual lab documentation.
+- Keep the [December learning plan](https://github.com/naren4b/my-ai-hub/blob/main/my-ai/my-learning/2026-12-ai-python-projects.md) in my-ai-hub (pending merge).
+- Keep portfolio evidence and architecture case studies in [my-ai-platform](https://github.com/naren4b/my-ai-platform).
+- Do not connect corporate Loki or export company logs without separate approval.
 
-## Implementation plan
-
-First lab: [SmartLog](smartlog/README.md) in `ai-engineering/smartlog/` (v0.1 MVP). Build locally using synthetic logs before any approved corporate integration.
-
-The solution should use synthetic logs locally at first. Corporate data and
-Loki integration require approval and must stay in approved corporate systems.
-Use read-only queries. No automatic deletion or production configuration changes.
-
-Use free, open-source learning tools where practical. Estimate and approve any
-cloud/API costs before provisioning. Cursor can help with small implementation
-steps and test generation, but outputs require review.
-
-## Ownership and navigation
-
-- **This repository:** engineering catalog and future runnable labs
-- **[December learning roadmap](https://github.com/naren4b/my-ai-hub/pull/109):** schedule, priorities and learning checkpoints (review PR, not yet merged)
-- **[AI platform portfolio](https://github.com/naren4b/my-ai-platform):** architectural case studies and evidence links only
-- Do not duplicate implementation code across repositories
-
-## Definition of done for the first lab
-
-- Reproducible local demo with test data
-- Baseline log-noise metrics and evaluated quality findings
-- Secure read-only tool access with failure handling
-- A minimal architecture diagram and a cost/security note
-- No claims of production impact without measured evidence
+**Status:** The 12 standalone briefs are learning plans. SmartLog has a runnable local prototype; no production integration is deployed.
