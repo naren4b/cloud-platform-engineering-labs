@@ -3,7 +3,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HOME=/tmp
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py analyzer.py parsers.py ./
+COPY app.py analyzer.py parsers.py guidance.py ./
 COPY samples ./samples
 COPY tests ./tests
 COPY .streamlit ./.streamlit
