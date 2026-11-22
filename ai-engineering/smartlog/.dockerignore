@@ -1,0 +1,15 @@
+.git
+.github
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env*
+*.csv
+*.json
+*.log
+!samples/sample.log
+!tests/fixtures/*.log
+!tests/fixtures/*.json
+data/
+reports/

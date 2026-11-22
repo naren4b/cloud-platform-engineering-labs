@@ -1,0 +1,6 @@
+time="2026-06-27T10:00:00.000Z" level=info msg="[com.example.app.Worker] started worker" worker=1
+time="2026-06-27T10:00:01.000Z" level=warn msg="[com.example.app.Queue] backlog high" depth=120
+time="2026-06-27T10:00:02.000Z" level=error msg="[com.example.app.Store] write failed" cause="timeout"
+	at com.example.app.Store.write(Store.java:42)
+	at com.example.app.Main.run(Main.java:10)
+Caused by: java.io.IOException: synthetic failure

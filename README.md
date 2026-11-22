@@ -2,6 +2,8 @@
 
 Reference implementations and architecture patterns for cloud infrastructure, platform engineering, Kubernetes, DevSecOps and site reliability engineering.
 
+**Docker-first rule:** Runnable labs provide a Dockerfile with dependencies installed and a copy-ready `docker run` command; the host normally needs Docker only. See [Docker-first project rule](docs/docker-first.md).
+
 ## Project Layout Rule
 
 Every new standalone project must live in its own short, kebab-case directory
@@ -15,8 +17,8 @@ individual project documentation. Apply this to **all** categories below.
 ### AI Engineering
 
 [December 2026 AI engineering catalog](ai-engineering/README.md):
-12 prioritized Python and agentic AI projects. The first integrated lab is
-an AI-powered Logging Quality Auditor (planned).
+12 prioritized Python and agentic AI project briefs, plus the first runnable lab:
+[SmartLog](ai-engineering/smartlog/README.md), a Docker-first log-quality analyzer.
 
 ### Cloud Infrastructure
 

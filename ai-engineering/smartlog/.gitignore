@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.log
+!samples/sample.log
+!tests/fixtures/*.log
+*.csv
+*.json
+!tests/fixtures/*.json
+.env
+reports/
+data/
