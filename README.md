@@ -7,8 +7,8 @@ Reference implementations and architecture patterns for cloud infrastructure, pl
 ### AI Engineering
 
 [December 2026 AI engineering catalog](ai-engineering/README.md):
-12 prioritized Python and agentic AI projects. The first integrated lab is
-an AI-powered Logging Quality Auditor (planned).
+12 prioritized Python and agentic AI ideas. The first integrated lab is
+[SmartLog](ai-engineering/smartlog/README.md), an offline logging-quality analyzer.
 
 ### Cloud Infrastructure
 

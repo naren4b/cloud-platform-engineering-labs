@@ -1,0 +1,13 @@
+2026-06-27 10:00:00 INFO Connection established for worker 1
+2026-06-27 10:00:01 INFO Connection established for worker 2
+2026-06-27 10:00:02 INFO Connection established for worker 3
+2026-06-27 10:00:03 INFO Connection established for worker 4
+2026-06-27 10:00:04 INFO Connection established for worker 5
+2026-06-27 10:00:05 ERROR Database connection failed
+2026-06-27 10:00:07 ERROR Database connection failed
+2026-06-27 10:00:09 ERROR Database connection failed
+2026-06-27 10:00:11 ERROR Database connection failed
+2026-06-27 10:00:15 WARN Slow query detected: 290 ms
+2026-06-27 10:00:18 INFO HTTP request completed 200
+2026-06-27 10:01:10 DEBUG Cache lookup hit 491
+{"timestamp":"2026-06-27T10:01:12Z","level":"INFO","message":"Connection established for worker 6"}

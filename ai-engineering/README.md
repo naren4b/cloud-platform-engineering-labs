@@ -1,8 +1,7 @@
 # AI Engineering Labs
 
 These 12 ideas are captured for **December 2026** as a learning backlog.
-They are not 12 committed deployments. Start by implementing reusable modules
-inside one integrated **AI-powered Logging Quality Auditor** lab.
+They are not 12 committed deployments. The first implementation is [SmartLog](smartlog/README.md), a local logging-quality analyzer. Other project ideas remain a December learning backlog.
 
 Source: [LinkedIn list of 12 advanced AI engineering project ideas](https://lnkd.in/p/gu4RWnmb).
 
@@ -27,7 +26,7 @@ P0 = December core; P1 = stretch; P2 = later.
 
 ## December plan
 
-- **Week 1, Dec 1-6:** Python log parsing, baseline quality checks, read-only MCP (#6)
+- **Week 1, Dec 1-6:** Extend SmartLog log parsing and baseline quality checks; explore read-only MCP (#6)
 - **Week 2, Dec 7-13:** Evidence retrieval and self-correction (#4), context assembly (#1)
 - **Week 3, Dec 14-20:** Durable state (#5), evaluation (#9), security gateway (#10)
 - **Week 4, Dec 21-27:** Architecture review (#12), optional hybrid retrieval (#2) and caching (#11)
@@ -35,8 +34,7 @@ P0 = December core; P1 = stretch; P2 = later.
 
 ## Implementation plan
 
-Suggested first lab directory: `ai-engineering/log-quality-auditor/`.
-Create it only when Week 1 starts.
+First lab: [SmartLog](smartlog/README.md) in `ai-engineering/smartlog/` (v0.1 MVP). Build locally using synthetic logs before any approved corporate integration.
 
 The solution should use synthetic logs locally at first. Corporate data and
 Loki integration require approval and must stay in approved corporate systems.

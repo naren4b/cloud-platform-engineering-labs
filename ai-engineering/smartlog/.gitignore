@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.log
+!samples/sample.log
+*.csv
+*.json
+.env
+reports/
+data/
