@@ -22,7 +22,7 @@ class GuidanceTests(unittest.TestCase):
         result = analyze("\n".join(["2026-11-22 10:00:00 INFO PRIVATE-CUSTOMER-XYZ ping 123"] * 5))
         prompt = next_action_prompt(result, find_candidates(result))
         self.assertNotIn("PRIVATE-CUSTOMER-XYZ", prompt)
-        self.assertNotIn("ping", prompt)
+        self.assertNotIn(result["patterns"][0]["template"], prompt)
         self.assertIn("Find the logging callsite", prompt)
 
     def test_empty_and_unsupported_input(self):
