@@ -9,5 +9,7 @@ __pycache__/
 *.json
 *.log
 !samples/sample.log
+!tests/fixtures/*.log
+!tests/fixtures/*.json
 data/
 reports/
