@@ -2,6 +2,14 @@
 
 Reference implementations and architecture patterns for cloud infrastructure, platform engineering, Kubernetes, DevSecOps and site reliability engineering.
 
+## Project Layout Rule
+
+Every new standalone project must live in its own short, kebab-case directory
+with a `README.md`, for example `ai-engineering/06-mcp-server/README.md`.
+Keep setup, code, tests and project evidence with that project's README.
+Category and repository READMEs are navigation indexes, not substitutes for
+individual project documentation. Apply this to **all** categories below.
+
 ## Project Catalog
 
 ### AI Engineering
